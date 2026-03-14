@@ -3,24 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FileVault — Secure Cloud Storage</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<title>FileVault</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:       #080810;
-  --surface:  #10101a;
-  --surface2: #161622;
-  --border:   #1e1e30;
-  --border2:  #2a2a40;
-  --accent:   #7c6fff;
-  --accent2:  #ff6fb0;
-  --accent3:  #6fffd4;
-  --text:     #eeeaf8;
-  --muted:    #6b6880;
-  --danger:   #ff5f6d;
-  --radius:   14px;
-  --glow:     0 0 40px rgba(124,111,255,0.15);
+  --bg:      #080810;
+  --surface: #10101a;
+  --surf2:   #161622;
+  --border:  #1e1e30;
+  --bord2:   #2a2a40;
+  --accent:  #7c6fff;
+  --green:   #6fffd4;
+  --pink:    #ff6fb0;
+  --text:    #eeeaf8;
+  --muted:   #6b6880;
+  --danger:  #ff5f6d;
+  --r:       12px;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -30,620 +28,324 @@ body {
   color: var(--text);
   font-family: 'JetBrains Mono', monospace;
   min-height: 100vh;
-  overflow-x: hidden;
 }
 
 body::after {
   content: '';
   position: fixed; inset: 0; pointer-events: none; z-index: 0;
   background:
-    radial-gradient(ellipse 60% 50% at 80% 10%, rgba(124,111,255,0.08) 0%, transparent 60%),
-    radial-gradient(ellipse 50% 40% at 10% 90%, rgba(255,111,176,0.06) 0%, transparent 60%),
-    radial-gradient(ellipse 40% 40% at 50% 50%, rgba(111,255,212,0.03) 0%, transparent 70%);
+    radial-gradient(ellipse 60% 50% at 75% 5%, rgba(124,111,255,.08), transparent 60%),
+    radial-gradient(ellipse 50% 40% at 10% 90%, rgba(255,111,176,.06), transparent 60%);
 }
 
-.screen { position: relative; z-index: 1; }
+#auth, #app { position: relative; z-index: 1; }
 
-#auth-screen {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  padding: 24px;
+#auth {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100vh; padding: 24px;
 }
 
-#app-screen { display: none; flex-direction: column; min-height: 100vh; }
+#app { display: none; flex-direction: column; min-height: 100vh; }
 
-.auth-wrap {
-  width: 100%; max-width: 440px;
-  animation: riseIn .6s cubic-bezier(.22,1,.36,1) both;
-}
-
-.auth-brand {
-  text-align: center;
-  margin-bottom: 32px;
-}
-
-.brand-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 56px; height: 56px;
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
-  border-radius: 16px;
-  font-size: 1.5rem;
-  margin-bottom: 14px;
-  box-shadow: 0 8px 32px rgba(124,111,255,0.4);
-}
-
-.auth-title {
-  font-family: 'Playfair Display', serif;
-  font-size: 2.2rem;
-  font-weight: 900;
-  letter-spacing: -1px;
-  background: linear-gradient(135deg, var(--text) 40%, var(--accent));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  line-height: 1;
-  margin-bottom: 6px;
-}
-
-.auth-sub {
-  color: var(--muted);
-  font-size: .75rem;
-  letter-spacing: .05em;
-}
-
-.auth-card {
+.box {
+  width: 100%; max-width: 420px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 22px;
+  border-radius: 20px;
   padding: 36px;
-  box-shadow: var(--glow), 0 2px 0 rgba(255,255,255,0.03) inset;
+  box-shadow: 0 0 40px rgba(124,111,255,.12);
+  animation: up .5s cubic-bezier(.22,1,.36,1);
 }
 
-.tab-row {
-  display: flex;
-  background: var(--bg);
-  border-radius: 10px;
-  padding: 4px;
-  margin-bottom: 28px;
-  border: 1px solid var(--border);
+.logo {
+  font-family: 'Playfair Display', serif;
+  font-size: 2rem; font-weight: 700;
+  background: linear-gradient(135deg, var(--text) 40%, var(--accent));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  margin-bottom: 4px;
+}
+
+.sub { color: var(--muted); font-size: .75rem; margin-bottom: 28px; }
+
+.tabs {
+  display: flex; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: 3px; margin-bottom: 24px;
 }
 
 .tab {
-  flex: 1; text-align: center;
-  padding: 9px;
-  border-radius: 7px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: .75rem;
-  font-weight: 500;
-  cursor: pointer;
-  border: none;
-  background: transparent;
-  color: var(--muted);
-  transition: background .2s, color .2s;
-  letter-spacing: .03em;
+  flex: 1; padding: 8px; border-radius: 6px; border: none;
+  background: transparent; color: var(--muted);
+  font-family: 'JetBrains Mono', monospace; font-size: .75rem;
+  cursor: pointer; transition: background .2s, color .2s;
 }
 
-.tab.active {
-  background: var(--surface2);
-  color: var(--text);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+.tab.on { background: var(--surf2); color: var(--text); }
+
+label { display: block; font-size: .68rem; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 6px; }
+
+input[type=email], input[type=password], input[type=text] {
+  width: 100%; background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--r); color: var(--text);
+  font-family: 'JetBrains Mono', monospace; font-size: .85rem;
+  padding: 12px 14px; outline: none; margin-bottom: 16px;
+  transition: border-color .2s;
 }
 
-.field { margin-bottom: 18px; }
+input:focus { border-color: var(--accent); }
 
-.field label {
-  display: block;
-  font-size: .68rem;
-  color: var(--muted);
-  letter-spacing: .1em;
-  text-transform: uppercase;
-  margin-bottom: 7px;
+.btn {
+  width: 100%; padding: 13px; border-radius: var(--r); border: none;
+  font-family: 'JetBrains Mono', monospace; font-size: .82rem; font-weight: 500;
+  cursor: pointer; letter-spacing: .03em;
+  transition: transform .15s, opacity .15s;
 }
 
-.field input {
-  width: 100%;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  color: var(--text);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: .88rem;
-  padding: 13px 15px;
-  outline: none;
-  transition: border-color .2s, box-shadow .2s;
-}
+.btn:hover { transform: translateY(-1px); }
+.btn:active { transform: none; }
+.btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
 
-.field input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(124,111,255,0.12);
-}
-
-.btn-main {
-  width: 100%;
-  padding: 14px;
-  border-radius: 11px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: .82rem;
-  font-weight: 500;
-  cursor: pointer;
-  border: none;
-  letter-spacing: .04em;
-  transition: transform .15s, box-shadow .15s, opacity .15s;
+.btn-primary {
   background: linear-gradient(135deg, var(--accent), #9b8dff);
-  color: #fff;
-  box-shadow: 0 4px 20px rgba(124,111,255,0.35);
+  color: #fff; box-shadow: 0 4px 16px rgba(124,111,255,.3);
   margin-bottom: 14px;
 }
 
-.btn-main:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(124,111,255,0.45); }
-.btn-main:active { transform: translateY(0); }
-.btn-main:disabled { opacity: .5; cursor: not-allowed; transform: none; }
-
-.divider {
-  display: flex; align-items: center; gap: 12px;
-  color: var(--muted); font-size: .7rem;
-  letter-spacing: .08em; text-transform: uppercase;
+.or {
+  display: flex; align-items: center; gap: 10px;
+  color: var(--muted); font-size: .7rem; text-transform: uppercase;
   margin-bottom: 14px;
 }
-.divider::before, .divider::after {
-  content: ''; flex: 1; height: 1px; background: var(--border);
-}
+.or::before, .or::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
 .btn-google {
-  width: 100%;
-  display: flex; align-items: center; justify-content: center; gap: 10px;
-  padding: 13px;
-  background: var(--surface2);
-  border: 1px solid var(--border2);
-  border-radius: 11px;
-  color: var(--text);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: .8rem;
-  cursor: pointer;
-  transition: border-color .2s, background .2s, transform .15s;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  background: var(--surf2); border: 1px solid var(--bord2);
+  color: var(--text); transition: border-color .2s, transform .15s;
 }
-.btn-google:hover {
-  border-color: var(--accent3);
-  background: rgba(111,255,212,0.05);
-  transform: translateY(-1px);
-}
+.btn-google:hover { border-color: var(--green); }
 
 header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 36px;
-  border-bottom: 1px solid var(--border);
-  background: rgba(8,8,16,.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  position: sticky; top: 0; z-index: 100;
+  padding: 14px 32px; border-bottom: 1px solid var(--border);
+  background: rgba(8,8,16,.85); backdrop-filter: blur(14px);
+  position: sticky; top: 0; z-index: 10;
 }
 
-.header-logo {
-  display: flex; align-items: center; gap: 10px;
+.hlogo { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--accent); }
+
+.hright { display: flex; align-items: center; gap: 12px; }
+
+#user-email { font-size: .72rem; color: var(--muted); }
+
+.btn-out {
+  background: transparent; border: 1px solid var(--border); color: var(--muted);
+  border-radius: 8px; padding: 6px 12px;
+  font-family: 'JetBrains Mono', monospace; font-size: .72rem;
+  cursor: pointer; transition: border-color .2s, color .2s;
+}
+.btn-out:hover { border-color: var(--danger); color: var(--danger); }
+
+main { padding: 36px 32px; max-width: 860px; margin: 0 auto; width: 100%; }
+
+.stats {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 12px; margin-bottom: 36px;
 }
 
-.logo-icon {
-  width: 32px; height: 32px;
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
-  border-radius: 9px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: .9rem;
-  box-shadow: 0 4px 12px rgba(124,111,255,0.3);
+.stat {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 16px 18px;
 }
 
-.logo-text {
-  font-family: 'Playfair Display', serif;
-  font-size: 1.2rem;
-  font-weight: 900;
-  background: linear-gradient(135deg, var(--text), var(--accent));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+.stat-l { font-size: .67rem; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 6px; }
+.stat-v { font-family: 'Playfair Display', serif; font-size: 1.5rem; }
+.stat-v span { font-family: 'JetBrains Mono', monospace; font-size: .75rem; color: var(--muted); margin-left: 3px; }
+
+.zone {
+  border: 1.5px dashed var(--bord2); border-radius: 16px; padding: 44px;
+  text-align: center; cursor: pointer; margin-bottom: 36px;
+  transition: border-color .2s, background .2s;
+  background: rgba(124,111,255,.02);
 }
+.zone:hover, .zone.over { border-color: var(--accent); background: rgba(124,111,255,.04); }
+.zone.over { border-style: solid; }
 
-.header-right { display: flex; align-items: center; gap: 14px; }
+.zone-icon { font-size: 2.4rem; display: block; margin-bottom: 10px; }
+.zone-text { color: var(--muted); font-size: .78rem; margin-bottom: 18px; }
+.zone-text b { color: var(--accent); font-weight: 400; }
 
-.user-pill {
-  display: flex; align-items: center; gap: 8px;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 6px 12px 6px 8px;
+.btn-pick {
+  display: inline-block; background: linear-gradient(135deg, var(--accent), #9b8dff);
+  color: #fff; border: none; border-radius: 9px; padding: 10px 22px;
+  font-family: 'JetBrains Mono', monospace; font-size: .78rem;
+  cursor: pointer; box-shadow: 0 4px 14px rgba(124,111,255,.3);
+  transition: transform .15s; position: relative; z-index: 1;
 }
-
-.user-avatar {
-  width: 24px; height: 24px;
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: .65rem; font-weight: 700; color: #fff;
-}
-
-#user-email { font-size: .72rem; color: var(--muted); max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-.btn-signout {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--muted);
-  border-radius: 8px;
-  padding: 7px 14px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: .72rem;
-  cursor: pointer;
-  transition: border-color .2s, color .2s;
-}
-.btn-signout:hover { border-color: var(--danger); color: var(--danger); }
-
-main { padding: 44px 36px; max-width: 960px; margin: 0 auto; width: 100%; }
-
-.stats-row {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
-  margin-bottom: 40px;
-}
-
-.stat-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 18px 20px;
-  transition: border-color .2s;
-}
-.stat-card:hover { border-color: var(--border2); }
-
-.stat-label { font-size: .68rem; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 8px; }
-.stat-value { font-family: 'Playfair Display', serif; font-size: 1.6rem; font-weight: 700; color: var(--text); }
-.stat-value span { font-family: 'JetBrains Mono', monospace; font-size: .8rem; color: var(--muted); font-weight: 400; margin-left: 4px; }
-
-.section-head {
-  display: flex; align-items: baseline; gap: 10px;
-  margin-bottom: 8px;
-}
-.section-title {
-  font-family: 'Playfair Display', serif;
-  font-size: 1.6rem;
-  font-weight: 700;
-  letter-spacing: -.5px;
-}
-.section-sub { color: var(--muted); font-size: .75rem; margin-bottom: 20px; }
-
-#drop-zone {
-  border: 1.5px dashed var(--border2);
-  border-radius: 18px;
-  padding: 48px 40px;
-  text-align: center;
-  cursor: pointer;
-  transition: border-color .25s, background .25s, transform .2s;
-  background: rgba(124,111,255,0.02);
-  margin-bottom: 44px;
-  position: relative;
-  overflow: hidden;
-}
-
-#drop-zone::before {
-  content: '';
-  position: absolute; inset: 0;
-  background: radial-gradient(ellipse 60% 60% at 50% 50%, rgba(124,111,255,0.05), transparent);
-  opacity: 0; transition: opacity .3s;
-}
-
-#drop-zone:hover::before, #drop-zone.drag-over::before { opacity: 1; }
-#drop-zone:hover, #drop-zone.drag-over {
-  border-color: var(--accent);
-  background: rgba(124,111,255,0.04);
-}
-#drop-zone.drag-over {
-  border-style: solid;
-  transform: scale(1.005);
-}
-
-.drop-emoji { font-size: 2.8rem; margin-bottom: 12px; display: block; }
-.drop-headline { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--text); margin-bottom: 6px; }
-.drop-sub { color: var(--muted); font-size: .76rem; margin-bottom: 20px; }
-.drop-sub strong { color: var(--accent); }
-
-.btn-browse {
-  display: inline-flex; align-items: center; gap: 8px;
-  background: linear-gradient(135deg, var(--accent), #9b8dff);
-  color: #fff;
-  border: none;
-  border-radius: 10px;
-  padding: 11px 24px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: .78rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: transform .15s, box-shadow .15s;
-  box-shadow: 0 4px 16px rgba(124,111,255,0.3);
-  letter-spacing: .03em;
-  position: relative; z-index: 1;
-}
-.btn-browse:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(124,111,255,0.4); }
+.btn-pick:hover { transform: translateY(-1px); }
 
 #file-input { display: none; }
 
-.files-toolbar {
+.bar {
   display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 16px;
-  gap: 16px;
-  flex-wrap: wrap;
+  margin-bottom: 14px; gap: 12px;
 }
 
-.search-wrap {
-  position: relative; flex: 1; max-width: 300px;
+.stitle { font-family: 'Playfair Display', serif; font-size: 1.3rem; }
+
+.search-wrap { position: relative; }
+.search-wrap input {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 9px; color: var(--text);
+  font-family: 'JetBrains Mono', monospace; font-size: .77rem;
+  padding: 9px 12px 9px 30px; outline: none; width: 220px;
+  transition: border-color .2s; margin-bottom: 0;
 }
+.search-wrap input:focus { border-color: var(--accent); }
+.search-wrap input::placeholder { color: var(--muted); }
+.si { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
 
-.search-icon {
-  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
-  color: var(--muted); font-size: .85rem; pointer-events: none;
-}
+#list { display: flex; flex-direction: column; gap: 8px; }
 
-#search {
-  width: 100%;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  color: var(--text);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: .78rem;
-  padding: 10px 12px 10px 34px;
-  outline: none;
-  transition: border-color .2s, box-shadow .2s;
-}
-#search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(124,111,255,0.1); }
-#search::placeholder { color: var(--muted); }
-
-.file-count { font-size: .72rem; color: var(--muted); white-space: nowrap; }
-
-#file-list { display: flex; flex-direction: column; gap: 8px; }
-
-.loading-files {
-  display: flex; align-items: center; gap: 10px;
-  color: var(--muted); font-size: .78rem; padding: 24px 0;
-}
-
-.spinner {
-  width: 16px; height: 16px;
-  border: 2px solid var(--border2);
-  border-top-color: var(--accent);
-  border-radius: 50%;
+.spin-wrap { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: .78rem; padding: 20px 0; }
+.spin {
+  width: 15px; height: 15px; border: 2px solid var(--bord2);
+  border-top-color: var(--accent); border-radius: 50%;
   animation: spin .7s linear infinite;
-  flex-shrink: 0;
 }
 
-#empty-state {
-  display: none;
-  flex-direction: column; align-items: center;
-  padding: 70px 20px;
-  gap: 10px;
+#empty {
+  display: none; flex-direction: column; align-items: center;
+  padding: 60px 0; gap: 8px; color: var(--muted);
 }
 
-.empty-icon { font-size: 3rem; opacity: .5; }
-.empty-title { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--muted); }
-.empty-sub { font-size: .73rem; color: var(--muted); opacity: .7; }
-
-.file-card {
-  display: flex; align-items: center; gap: 14px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 14px 16px;
+.card {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 13px 15px;
   transition: border-color .2s, background .2s, transform .2s;
-  animation: riseIn .25s ease both;
+  animation: up .2s ease;
+}
+.card:hover { border-color: var(--bord2); background: var(--surf2); transform: translateX(3px); }
+.card.gone { opacity: 0; transform: scale(.96); transition: all .25s; }
+.card.uploading { border-color: rgba(124,111,255,.3); }
+
+.icon {
+  width: 40px; height: 40px; flex-shrink: 0;
+  background: var(--surf2); border: 1px solid var(--border);
+  border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;
 }
 
-.file-card:hover {
-  border-color: var(--border2);
-  background: var(--surface2);
-  transform: translateX(4px);
+.info { flex: 1; min-width: 0; }
+.fname { font-size: .82rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px; }
+.meta { display: flex; gap: 5px; flex-wrap: wrap; }
+.badge { font-size: .63rem; color: var(--muted); background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; }
+
+.acts { display: flex; gap: 5px; flex-shrink: 0; }
+.act {
+  width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+  border-radius: 8px; border: 1px solid var(--border); background: transparent;
+  color: var(--muted); font-size: .8rem; cursor: pointer; text-decoration: none;
+  transition: background .15s, color .15s, border-color .15s;
 }
+.act:hover { transform: translateY(-1px); }
+.dl:hover  { background: rgba(111,255,212,.1); color: var(--green); border-color: var(--green); }
+.sh:hover  { background: rgba(124,111,255,.1); color: var(--accent); border-color: var(--accent); }
+.rm:hover  { background: rgba(255,95,109,.1); color: var(--danger); border-color: var(--danger); }
 
-.file-card.fade-out { opacity: 0; transform: scale(.97) translateX(8px); transition: all .25s; }
-.file-card.uploading { border-color: rgba(124,111,255,0.3); }
-
-.file-thumb {
-  width: 42px; height: 42px; flex-shrink: 0;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.3rem;
-}
-
-.file-info { flex: 1; min-width: 0; }
-
-.file-name {
-  font-size: .83rem; font-weight: 500;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  color: var(--text); margin-bottom: 5px;
-}
-
-.file-meta { display: flex; gap: 6px; flex-wrap: wrap; }
-.file-badge {
-  font-size: .65rem; color: var(--muted);
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 2px 7px;
-}
-
-.file-actions { display: flex; gap: 6px; flex-shrink: 0; }
-
-.btn-act {
-  width: 34px; height: 34px;
-  display: flex; align-items: center; justify-content: center;
-  border-radius: 9px;
-  font-size: .82rem;
-  cursor: pointer;
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--muted);
-  text-decoration: none;
-  transition: background .15s, color .15s, border-color .15s, transform .15s;
-}
-.btn-act:hover { transform: translateY(-1px); }
-.btn-dl:hover    { background: rgba(111,255,212,.1); color: var(--accent3); border-color: var(--accent3); }
-.btn-share:hover { background: rgba(124,111,255,.1); color: var(--accent); border-color: var(--accent); }
-.btn-del:hover   { background: rgba(255,95,109,.1); color: var(--danger); border-color: var(--danger); }
-
-.prog-track {
-  height: 3px; background: var(--border);
-  border-radius: 2px; margin-top: 8px; overflow: hidden;
-}
-.prog-bar {
-  height: 100%;
-  background: linear-gradient(90deg, var(--accent), var(--accent2));
-  border-radius: 2px; width: 0; transition: width .2s;
-}
-.prog-label { font-size: .7rem; color: var(--accent); min-width: 36px; text-align: right; flex-shrink: 0; }
+.prog-track { height: 3px; background: var(--border); border-radius: 2px; margin-top: 6px; overflow: hidden; }
+.prog-bar { height: 100%; background: linear-gradient(90deg, var(--accent), var(--pink)); width: 0; transition: width .2s; }
+.prog-lbl { font-size: .7rem; color: var(--accent); min-width: 32px; text-align: right; flex-shrink: 0; }
 
 .toast {
-  position: fixed; bottom: 28px; left: 50%;
-  transform: translateX(-50%) translateY(16px);
-  background: var(--surface2);
-  border: 1px solid var(--border2);
-  color: var(--text); border-radius: 12px;
-  padding: 11px 20px; font-size: .78rem;
-  opacity: 0; pointer-events: none;
-  transition: opacity .25s, transform .25s;
-  z-index: 9999; white-space: nowrap;
-  display: flex; align-items: center; gap: 8px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  position: fixed; bottom: 24px; left: 50%;
+  transform: translateX(-50%) translateY(14px);
+  background: var(--surf2); border: 1px solid var(--bord2);
+  color: var(--text); border-radius: 10px; padding: 10px 18px;
+  font-size: .77rem; opacity: 0; pointer-events: none;
+  transition: opacity .2s, transform .2s;
+  z-index: 999; white-space: nowrap; display: flex; align-items: center; gap: 7px;
+  box-shadow: 0 6px 24px rgba(0,0,0,.4);
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-.toast.success { border-color: var(--accent3); }
-.toast.success::before { content: '✓'; color: var(--accent3); font-weight: 700; }
-.toast.error { border-color: var(--danger); }
-.toast.error::before { content: '✕'; color: var(--danger); font-weight: 700; }
-.toast.info::before { content: 'ℹ'; color: var(--accent); }
+.toast.ok  { border-color: var(--green); }
+.toast.ok::before  { content: '✓'; color: var(--green); }
+.toast.err { border-color: var(--danger); }
+.toast.err::before { content: '✕'; color: var(--danger); }
 
-@keyframes riseIn {
-  from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
+@keyframes up   { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-@media (max-width: 640px) {
-  header { padding: 14px 18px; }
-  main { padding: 28px 18px; }
-  .auth-card { padding: 28px 22px; }
-  .stats-row { grid-template-columns: 1fr 1fr; }
-  .stats-row .stat-card:last-child { display: none; }
+@media (max-width: 600px) {
+  header { padding: 12px 16px; }
+  main { padding: 24px 16px; }
+  .stats { grid-template-columns: 1fr 1fr; }
+  .stats .stat:last-child { display: none; }
   #user-email { display: none; }
 }
 </style>
 </head>
 <body>
 
-<div id="auth-screen" class="screen">
-  <div class="auth-wrap">
-    <div class="auth-brand">
-      <div class="brand-mark">🔐</div>
-      <div class="auth-title">FileVault</div>
-      <div class="auth-sub">Your personal cloud storage</div>
+<div id="auth">
+  <div class="box">
+    <div class="logo">FileVault</div>
+    <div class="sub">Your personal cloud storage</div>
+    <div class="tabs">
+      <button class="tab on" id="tab-in">Sign In</button>
+      <button class="tab" id="tab-up">Create Account</button>
     </div>
-
-    <div class="auth-card">
-      <div class="tab-row">
-        <button class="tab active" id="tab-signin">Sign In</button>
-        <button class="tab" id="tab-signup">Create Account</button>
-      </div>
-
-      <div class="field">
-        <label for="auth-email">Email address</label>
-        <input type="email" id="auth-email" placeholder="you@example.com" autocomplete="email">
-      </div>
-
-      <div class="field">
-        <label for="auth-pass">Password</label>
-        <input type="password" id="auth-pass" placeholder="••••••••" autocomplete="current-password">
-      </div>
-
-      <button class="btn-main" id="btn-auth">Sign In</button>
-
-      <div class="divider">or continue with</div>
-
-      <button class="btn-google" id="btn-google">
-        <svg width="17" height="17" viewBox="0 0 48 48">
-          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-          <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-        </svg>
-        Google
-      </button>
-    </div>
+    <label>Email</label>
+    <input type="email" id="em" placeholder="you@example.com">
+    <label>Password</label>
+    <input type="password" id="pw" placeholder="••••••••">
+    <button class="btn btn-primary" id="btn-auth">Sign In</button>
+    <div class="or">or</div>
+    <button class="btn btn-google" id="btn-g">
+      <svg width="16" height="16" viewBox="0 0 48 48">
+        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+      </svg>
+      Google
+    </button>
   </div>
 </div>
 
-<div id="app-screen" class="screen">
+<div id="app">
   <header>
-    <div class="header-logo">
-      <div class="logo-icon">🔐</div>
-      <div class="logo-text">FileVault</div>
-    </div>
-    <div class="header-right">
-      <div class="user-pill">
-        <div class="user-avatar" id="user-avatar">?</div>
-        <span id="user-email"></span>
-      </div>
-      <button class="btn-signout" id="btn-signout">Sign out</button>
+    <div class="hlogo">FileVault</div>
+    <div class="hright">
+      <span id="user-email"></span>
+      <button class="btn-out" id="btn-out">Sign out</button>
     </div>
   </header>
-
   <main>
-    <div class="stats-row">
-      <div class="stat-card">
-        <div class="stat-label">Total Files</div>
-        <div class="stat-value" id="stat-count">0</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Storage Used</div>
-        <div class="stat-value" id="stat-size">0 <span>B</span></div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">File Types</div>
-        <div class="stat-value" id="stat-types">—</div>
-      </div>
+    <div class="stats">
+      <div class="stat"><div class="stat-l">Files</div><div class="stat-v" id="s-count">0</div></div>
+      <div class="stat"><div class="stat-l">Storage</div><div class="stat-v" id="s-size">0 <span>B</span></div></div>
+      <div class="stat"><div class="stat-l">Types</div><div class="stat-v" id="s-types">—</div></div>
     </div>
 
-    <div class="section-head">
-      <div class="section-title">Upload</div>
-    </div>
-    <div class="section-sub">Drag & drop or click to select files</div>
-
-    <div id="drop-zone">
-      <span class="drop-emoji">☁️</span>
-      <div class="drop-headline">Drop files here</div>
-      <div class="drop-sub">or <strong>browse</strong> from your device</div>
-      <button class="btn-browse" id="btn-browse">Choose Files</button>
+    <div class="zone" id="zone">
+      <span class="zone-icon">☁️</span>
+      <div class="zone-text">Drop files here or <b>browse</b></div>
+      <button class="btn-pick" id="btn-pick">Choose Files</button>
       <input type="file" id="file-input" multiple>
     </div>
 
-    <div class="files-toolbar">
-      <div class="section-head" style="margin-bottom:0">
-        <div class="section-title" style="font-size:1.3rem">Your Files</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:12px">
-        <div class="search-wrap">
-          <span class="search-icon">⌕</span>
-          <input type="text" id="search" placeholder="Search files…">
-        </div>
-        <span class="file-count" id="file-count"></span>
+    <div class="bar">
+      <div class="stitle">Your Files</div>
+      <div class="search-wrap">
+        <span class="si">⌕</span>
+        <input type="text" id="search" placeholder="Search…">
       </div>
     </div>
 
-    <div id="file-list"></div>
-
-    <div id="empty-state">
-      <div class="empty-icon">📭</div>
-      <div class="empty-title">No files yet</div>
-      <div class="empty-sub">Upload something to get started</div>
+    <div id="list"></div>
+    <div id="empty">
+      <div style="font-size:2.5rem;opacity:.4">📭</div>
+      <div style="color:var(--muted);font-size:.78rem">No files yet</div>
     </div>
   </main>
 </div>
@@ -652,278 +354,198 @@ main { padding: 44px 36px; max-width: 960px; margin: 0 auto; width: 100%; }
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import {
-  getAuth, onAuthStateChanged, signInWithEmailAndPassword,
-  createUserWithEmailAndPassword, signInWithPopup,
-  GoogleAuthProvider, signOut
-} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import {
-  getStorage, ref, uploadBytesResumable, getDownloadURL,
-  deleteObject, listAll, getMetadata
-} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject, listAll, getMetadata } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
+import { firebaseConfig } from './config.js';
 
-const firebaseConfig = {
-  apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId:         import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket:     import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId:             import.meta.env.VITE_FIREBASE_APP_ID,
-};
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getStorage(app);
+const gp   = new GoogleAuthProvider();
 
-const app       = initializeApp(firebaseConfig);
-const auth      = getAuth(app);
-const storage   = getStorage(app);
-const gProvider = new GoogleAuthProvider();
+let mode = 'in';
 
-let currentTab = 'signin';
-let allFiles   = [];
+const $ = id => document.getElementById(id);
 
-function fmtSize(b) {
-  if (b < 1024) return b + ' B';
-  if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
-  return (b / 1048576).toFixed(1) + ' MB';
+function fmt(b) {
+  if (b < 1024) return [b, 'B'];
+  if (b < 1048576) return [(b/1024).toFixed(1), 'KB'];
+  return [(b/1048576).toFixed(1), 'MB'];
 }
 
-function extOf(name) { return name.split('.').pop().toLowerCase(); }
+function ext(n) { return n.includes('.') ? n.split('.').pop().toLowerCase() : '—'; }
 
-function iconFor(name) {
-  const e = extOf(name);
-  if (['png','jpg','jpeg','gif','webp','svg','ico'].includes(e)) return '🖼';
-  if (['mp4','mov','avi','mkv','webm'].includes(e)) return '🎬';
-  if (['mp3','wav','ogg','flac','aac'].includes(e)) return '🎵';
+function icon(n) {
+  const e = ext(n);
+  if (['png','jpg','jpeg','gif','webp','svg'].includes(e)) return '🖼';
+  if (['mp4','mov','avi','mkv'].includes(e)) return '🎬';
+  if (['mp3','wav','ogg','flac'].includes(e)) return '🎵';
   if (e === 'pdf') return '📄';
   if (['zip','rar','7z','tar','gz'].includes(e)) return '🗜';
   if (['doc','docx'].includes(e)) return '📝';
   if (['xls','xlsx','csv'].includes(e)) return '📊';
-  if (['ppt','pptx'].includes(e)) return '📋';
-  if (['js','ts','py','html','css','json','jsx','tsx'].includes(e)) return '💻';
-  if (['txt','md'].includes(e)) return '📃';
+  if (['js','ts','py','html','css','json'].includes(e)) return '💻';
   return '📁';
 }
 
-function toast(msg, type = 'info') {
-  const t = document.getElementById('toast');
+function toast(msg, type = '') {
+  const t = $('toast');
   t.textContent = msg;
   t.className = 'toast show ' + type;
-  clearTimeout(t._tid);
-  t._tid = setTimeout(() => { t.className = 'toast'; }, 3000);
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.className = 'toast', 3000);
 }
 
-function setLoading(btn, yes) {
-  if (yes) { btn.dataset.orig = btn.textContent; btn.textContent = '…'; btn.disabled = true; }
-  else { btn.textContent = btn.dataset.orig; btn.disabled = false; }
+function load(btn, yes) {
+  if (yes) { btn.dataset.o = btn.textContent; btn.textContent = '…'; btn.disabled = true; }
+  else { btn.textContent = btn.dataset.o; btn.disabled = false; }
 }
 
-function switchTab(tab) {
-  currentTab = tab;
-  document.getElementById('tab-signin').classList.toggle('active', tab === 'signin');
-  document.getElementById('tab-signup').classList.toggle('active', tab === 'signup');
-  document.getElementById('btn-auth').textContent = tab === 'signin' ? 'Sign In' : 'Create Account';
-}
-
-document.getElementById('tab-signin').addEventListener('click', () => switchTab('signin'));
-document.getElementById('tab-signup').addEventListener('click', () => switchTab('signup'));
-
-document.getElementById('btn-auth').addEventListener('click', async () => {
-  const btn   = document.getElementById('btn-auth');
-  const email = document.getElementById('auth-email').value.trim();
-  const pass  = document.getElementById('auth-pass').value;
-  if (!email || !pass) { toast('Please enter your email and password', 'error'); return; }
-  setLoading(btn, true);
-  try {
-    if (currentTab === 'signin') {
-      await signInWithEmailAndPassword(auth, email, pass);
-      toast('Welcome back!', 'success');
-    } else {
-      await createUserWithEmailAndPassword(auth, email, pass);
-      toast('Account created!', 'success');
-    }
-  } catch (e) {
-    toast(e.message.replace('Firebase: ', '').replace(/ \(auth\/.*\)\.?/, ''), 'error');
-  } finally { setLoading(btn, false); }
-});
-
-document.getElementById('btn-google').addEventListener('click', async () => {
-  try {
-    await signInWithPopup(auth, gProvider);
-    toast('Signed in with Google!', 'success');
-  } catch (e) {
-    toast(e.message.replace('Firebase: ', ''), 'error');
-  }
-});
-
-document.getElementById('btn-signout').addEventListener('click', async () => {
-  await signOut(auth);
-  allFiles = [];
-  updateStats([]);
-  document.getElementById('file-list').innerHTML = '';
-  toast('Signed out', 'info');
-});
-
-document.getElementById('auth-pass').addEventListener('keydown', e => {
-  if (e.key === 'Enter') document.getElementById('btn-auth').click();
-});
-
-onAuthStateChanged(auth, user => {
-  if (user) {
-    document.getElementById('auth-screen').style.display = 'none';
-    document.getElementById('app-screen').style.display  = 'flex';
-    const initials = (user.displayName || user.email || 'U')[0].toUpperCase();
-    document.getElementById('user-avatar').textContent = initials;
-    document.getElementById('user-email').textContent  = user.email || user.displayName;
-    loadFiles(user);
-  } else {
-    document.getElementById('auth-screen').style.display = 'flex';
-    document.getElementById('app-screen').style.display  = 'none';
-  }
-});
-
-function updateStats(files) {
-  const totalSize = files.reduce((s, f) => s + (f.size || 0), 0);
-  const types     = [...new Set(files.map(f => extOf(f.name)))];
-  document.getElementById('stat-count').textContent = files.length;
-  const sz = fmtSize(totalSize).split(' ');
-  document.getElementById('stat-size').innerHTML = `${sz[0]} <span>${sz[1]}</span>`;
-  document.getElementById('stat-types').textContent = types.length ? types.slice(0,3).join(', ') : '—';
-  document.getElementById('file-count').textContent = files.length ? `${files.length} file${files.length !== 1 ? 's' : ''}` : '';
+function stats(files) {
+  const total = files.reduce((s, f) => s + f.size, 0);
+  const types = [...new Set(files.map(f => ext(f.name)))].filter(e => e !== '—');
+  $('s-count').textContent = files.length;
+  const [n, u] = fmt(total);
+  $('s-size').innerHTML = `${n} <span>${u}</span>`;
+  $('s-types').textContent = types.length ? types.slice(0,3).join(', ') : '—';
 }
 
 async function loadFiles(user) {
-  const list  = document.getElementById('file-list');
-  const empty = document.getElementById('empty-state');
-  list.innerHTML = '<div class="loading-files"><div class="spinner"></div> Loading files…</div>';
-  empty.style.display = 'none';
+  const list = $('list');
+  list.innerHTML = '<div class="spin-wrap"><div class="spin"></div> Loading…</div>';
+  $('empty').style.display = 'none';
   try {
-    const folderRef = ref(storage, `users/${user.uid}/`);
-    const res = await listAll(folderRef);
+    const res = await listAll(ref(db, `users/${user.uid}/`));
     list.innerHTML = '';
-    if (res.items.length === 0) {
-      empty.style.display = 'flex';
-      allFiles = [];
-      updateStats([]);
-      return;
-    }
-    const items = await Promise.all(
-      res.items.map(async item => {
-        const [url, meta] = await Promise.all([getDownloadURL(item), getMetadata(item)]);
-        return { item, url, meta };
-      })
-    );
-    allFiles = items.map(({ item, meta }) => ({ name: item.name, size: meta.size }));
-    updateStats(allFiles);
-    items.forEach(({ item, url, meta }) => list.appendChild(createFileCard(item, meta, url, user)));
+    if (!res.items.length) { $('empty').style.display = 'flex'; stats([]); return; }
+    const items = await Promise.all(res.items.map(async item => {
+      const [url, meta] = await Promise.all([getDownloadURL(item), getMetadata(item)]);
+      return { item, url, meta };
+    }));
+    stats(items.map(({ item, meta }) => ({ name: item.name, size: meta.size })));
+    items.forEach(({ item, url, meta }) => list.appendChild(makeCard(item, meta, url, user)));
   } catch (e) {
     list.innerHTML = '';
-    toast('Could not load files: ' + e.message, 'error');
+    toast(e.message, 'err');
   }
 }
 
-async function deleteFile(item, card, user) {
-  if (!confirm(`Delete "${item.name}"? This cannot be undone.`)) return;
-  try {
-    await deleteObject(item);
-    card.classList.add('fade-out');
-    setTimeout(() => { card.remove(); loadFiles(user); }, 280);
-    toast('File deleted', 'success');
-  } catch (e) {
-    toast('Delete failed: ' + e.message, 'error');
-  }
-}
-
-async function shareFile(url) {
-  try {
-    await navigator.clipboard.writeText(url);
-    toast('Share link copied!', 'success');
-  } catch {
-    prompt('Copy this link:', url);
-  }
-}
-
-function createFileCard(item, meta, url, user) {
+function makeCard(item, meta, url, user) {
   const card = document.createElement('div');
-  card.className = 'file-card';
+  card.className = 'card';
   const date = new Date(meta.timeCreated).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const [n, u] = fmt(meta.size);
   card.innerHTML = `
-    <div class="file-thumb">${iconFor(item.name)}</div>
-    <div class="file-info">
-      <div class="file-name" title="${item.name}">${item.name}</div>
-      <div class="file-meta">
-        <span class="file-badge">${extOf(item.name).toUpperCase()}</span>
-        <span class="file-badge">${fmtSize(meta.size)}</span>
-        <span class="file-badge">${date}</span>
+    <div class="icon">${icon(item.name)}</div>
+    <div class="info">
+      <div class="fname" title="${item.name}">${item.name}</div>
+      <div class="meta">
+        <span class="badge">${ext(item.name).toUpperCase()}</span>
+        <span class="badge">${n} ${u}</span>
+        <span class="badge">${date}</span>
       </div>
     </div>
-    <div class="file-actions">
-      <a class="btn-act btn-dl" href="${url}" target="_blank" title="Download">↓</a>
-      <button class="btn-act btn-share" title="Copy share link">⇗</button>
-      <button class="btn-act btn-del" title="Delete">✕</button>
+    <div class="acts">
+      <a class="act dl" href="${url}" target="_blank" title="Download">↓</a>
+      <button class="act sh" title="Copy link">⇗</button>
+      <button class="act rm" title="Delete">✕</button>
     </div>`;
-  card.querySelector('.btn-share').addEventListener('click', () => shareFile(url));
-  card.querySelector('.btn-del').addEventListener('click', () => deleteFile(item, card, user));
+  card.querySelector('.sh').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(url); toast('Link copied!', 'ok'); }
+    catch { prompt('Copy link:', url); }
+  });
+  card.querySelector('.rm').addEventListener('click', async () => {
+    if (!confirm(`Delete "${item.name}"?`)) return;
+    try {
+      await deleteObject(item);
+      card.classList.add('gone');
+      setTimeout(() => { card.remove(); loadFiles(user); }, 250);
+      toast('Deleted', 'ok');
+    } catch (e) { toast(e.message, 'err'); }
+  });
   return card;
 }
 
-function createProgressCard(name) {
-  const card = document.createElement('div');
-  card.className = 'file-card uploading';
-  card.innerHTML = `
-    <div class="file-thumb">⏫</div>
-    <div class="file-info">
-      <div class="file-name">${name}</div>
-      <div class="prog-track"><div class="prog-bar"></div></div>
-    </div>
-    <div class="prog-label">0%</div>`;
-  return card;
-}
-
-function doUpload(files) {
-  const user = auth.currentUser;
-  if (!user || !files.length) return;
-  document.getElementById('empty-state').style.display = 'none';
+function upload(files, user) {
+  if (!files.length) return;
+  $('empty').style.display = 'none';
   [...files].forEach(file => {
-    const sRef = ref(storage, `users/${user.uid}/${file.name}`);
-    const task = uploadBytesResumable(sRef, file);
-    const card = createProgressCard(file.name);
-    document.getElementById('file-list').prepend(card);
-
+    const card = document.createElement('div');
+    card.className = 'card uploading';
+    card.innerHTML = `<div class="icon">⏫</div><div class="info"><div class="fname">${file.name}</div><div class="prog-track"><div class="prog-bar"></div></div></div><div class="prog-lbl">0%</div>`;
+    $('list').prepend(card);
+    const task = uploadBytesResumable(ref(db, `users/${user.uid}/${file.name}`), file);
     task.on('state_changed',
-      snap => {
-        const pct = Math.round(snap.bytesTransferred / snap.totalBytes * 100);
-        card.querySelector('.prog-bar').style.width = pct + '%';
-        card.querySelector('.prog-label').textContent = pct + '%';
+      s => {
+        const p = Math.round(s.bytesTransferred / s.totalBytes * 100);
+        card.querySelector('.prog-bar').style.width = p + '%';
+        card.querySelector('.prog-lbl').textContent = p + '%';
       },
-      err => { toast('Upload failed: ' + err.message, 'error'); card.remove(); },
-      async () => {
-        toast(`${file.name} uploaded!`, 'success');
-        card.remove();
-        loadFiles(user);
-      }
+      e => { toast(e.message, 'err'); card.remove(); },
+      () => { toast(`${file.name} uploaded!`, 'ok'); card.remove(); loadFiles(user); }
     );
   });
 }
 
-document.getElementById('btn-browse').addEventListener('click', e => {
-  e.stopPropagation();
-  document.getElementById('file-input').click();
+onAuthStateChanged(auth, user => {
+  if (user) {
+    $('auth').style.display = 'none';
+    $('app').style.display = 'flex';
+    $('user-email').textContent = user.email || user.displayName || '';
+    loadFiles(user);
+  } else {
+    $('auth').style.display = 'flex';
+    $('app').style.display = 'none';
+  }
 });
 
-document.getElementById('file-input').addEventListener('change', e => {
-  doUpload(e.target.files);
-  e.target.value = '';
+$('tab-in').addEventListener('click', () => {
+  mode = 'in';
+  $('tab-in').classList.add('on'); $('tab-up').classList.remove('on');
+  $('btn-auth').textContent = 'Sign In';
 });
 
-const zone = document.getElementById('drop-zone');
-zone.addEventListener('click', () => document.getElementById('file-input').click());
-['dragenter','dragover'].forEach(ev => zone.addEventListener(ev, e => { e.preventDefault(); zone.classList.add('drag-over'); }));
-['dragleave','drop'].forEach(ev => zone.addEventListener(ev, e => { e.preventDefault(); zone.classList.remove('drag-over'); }));
-zone.addEventListener('drop', e => doUpload(e.dataTransfer.files));
+$('tab-up').addEventListener('click', () => {
+  mode = 'up';
+  $('tab-up').classList.add('on'); $('tab-in').classList.remove('on');
+  $('btn-auth').textContent = 'Create Account';
+});
 
-document.getElementById('search').addEventListener('input', e => {
+$('btn-auth').addEventListener('click', async () => {
+  const btn = $('btn-auth');
+  const em = $('em').value.trim(), pw = $('pw').value;
+  if (!em || !pw) { toast('Enter email and password', 'err'); return; }
+  load(btn, true);
+  try {
+    if (mode === 'in') await signInWithEmailAndPassword(auth, em, pw);
+    else await createUserWithEmailAndPassword(auth, em, pw);
+  } catch (e) {
+    toast(e.message.replace('Firebase: ','').replace(/ \(auth\/.*?\)\.?/,''), 'err');
+  } finally { load(btn, false); }
+});
+
+$('btn-g').addEventListener('click', async () => {
+  try { await signInWithPopup(auth, gp); }
+  catch (e) { toast(e.message.replace('Firebase: ',''), 'err'); }
+});
+
+$('btn-out').addEventListener('click', () => signOut(auth));
+
+$('pw').addEventListener('keydown', e => { if (e.key === 'Enter') $('btn-auth').click(); });
+
+$('btn-pick').addEventListener('click', e => { e.stopPropagation(); $('file-input').click(); });
+$('file-input').addEventListener('change', e => { upload(e.target.files, auth.currentUser); e.target.value = ''; });
+
+const zone = $('zone');
+zone.addEventListener('click', () => $('file-input').click());
+['dragenter','dragover'].forEach(ev => zone.addEventListener(ev, e => { e.preventDefault(); zone.classList.add('over'); }));
+['dragleave','drop'].forEach(ev => zone.addEventListener(ev, e => { e.preventDefault(); zone.classList.remove('over'); }));
+zone.addEventListener('drop', e => upload(e.dataTransfer.files, auth.currentUser));
+
+$('search').addEventListener('input', e => {
   const q = e.target.value.toLowerCase();
-  document.querySelectorAll('.file-card:not(.uploading)').forEach(c => {
-    const n = c.querySelector('.file-name')?.textContent.toLowerCase() || '';
-    c.style.display = n.includes(q) ? '' : 'none';
+  document.querySelectorAll('.card:not(.uploading)').forEach(c => {
+    c.style.display = c.querySelector('.fname')?.textContent.toLowerCase().includes(q) ? '' : 'none';
   });
 });
 </script>

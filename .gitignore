@@ -5,4 +5,4 @@
 # Ignored log and temp files
 
 # Ignored sensitive information/variables
-.env
+config.js
