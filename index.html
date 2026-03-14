@@ -1,13 +1,676 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Page Title</title>
-    <link rel="stylesheet" href="styles.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>File-Host</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import {
+    getAuth, onAuthStateChanged, signInWithEmailAndPassword,
+    createUserWithEmailAndPassword, signInWithPopup,
+    GoogleAuthProvider, signOut
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import {
+    getStorage, ref, uploadBytesResumable, getDownloadURL,
+    deleteObject, listAll, getMetadata
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+
+  const firebaseConfig = __FIREBASE_CONFIG__;
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const storage = getStorage(app);
+  const gProvider = new GoogleAuthProvider();
+
+  function fmtSize(b) {
+    if (b < 1024) return b + ' B';
+    if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+    return (b / 1048576).toFixed(1) + ' MB';
+  }
+
+  function ext(name) {
+    return name.split('.').pop().toLowerCase();
+  }
+
+  function iconFor(name) {
+    const e = ext(name);
+    if (['png','jpg','jpeg','gif','webp','svg'].includes(e)) return '🖼';
+    if (['mp4','mov','avi','mkv'].includes(e)) return '🎬';
+    if (['mp3','wav','ogg','flac'].includes(e)) return '🎵';
+    if (['pdf'].includes(e)) return '📄';
+    if (['zip','rar','7z','tar','gz'].includes(e)) return '🗜';
+    if (['doc','docx'].includes(e)) return '📝';
+    if (['xls','xlsx','csv'].includes(e)) return '📊';
+    if (['js','ts','py','html','css','json'].includes(e)) return '💻';
+    return '📁';
+  }
+
+  function toast(msg, type = 'info') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show ' + type;
+    clearTimeout(t._tid);
+    t._tid = setTimeout(() => t.className = 'toast', 3000);
+  }
+
+  function setLoading(btn, yes) {
+    if (yes) { btn.dataset.orig = btn.textContent; btn.textContent = '…'; btn.disabled = true; }
+    else { btn.textContent = btn.dataset.orig; btn.disabled = false; }
+  }
+
+  onAuthStateChanged(auth, user => {
+    if (user) {
+      document.getElementById('auth-screen').style.display = 'none';
+      document.getElementById('app-screen').style.display = 'flex';
+      document.getElementById('user-email').textContent = user.email || user.displayName || 'User';
+      loadFiles(user);
+    } else {
+      document.getElementById('auth-screen').style.display = 'flex';
+      document.getElementById('app-screen').style.display = 'none';
+    }
+  });
+
+  window.signIn = async () => {
+    const btn = document.getElementById('btn-signin');
+    const email = document.getElementById('auth-email').value.trim();
+    const pass = document.getElementById('auth-pass').value;
+    if (!email || !pass) { toast('Enter email and password', 'error'); return; }
+    setLoading(btn, true);
+    try {
+      await signInWithEmailAndPassword(auth, email, pass);
+      toast('Welcome back!', 'success');
+    } catch (e) {
+      toast(e.message.replace('Firebase: ', ''), 'error');
+    } finally { setLoading(btn, false); }
+  };
+
+  window.signUp = async () => {
+    const btn = document.getElementById('btn-signup');
+    const email = document.getElementById('auth-email').value.trim();
+    const pass = document.getElementById('auth-pass').value;
+    if (!email || !pass) { toast('Enter email and password', 'error'); return; }
+    setLoading(btn, true);
+    try {
+      await createUserWithEmailAndPassword(auth, email, pass);
+      toast('Account created!', 'success');
+    } catch (e) {
+      toast(e.message.replace('Firebase: ', ''), 'error');
+    } finally { setLoading(btn, false); }
+  };
+
+  window.signInGoogle = async () => {
+    try {
+      await signInWithPopup(auth, gProvider);
+      toast('Signed in with Google!', 'success');
+    } catch (e) {
+      toast(e.message.replace('Firebase: ', ''), 'error');
+    }
+  };
+
+  window.logOut = async () => {
+    await signOut(auth);
+    document.getElementById('file-list').innerHTML = '';
+    toast('Signed out');
+  };
+
+  window.handleUpload = () => {
+    const files = document.getElementById('file-input').files;
+    if (!files.length) return;
+    const user = auth.currentUser;
+    [...files].forEach(file => {
+      const storageRef = ref(storage, `users/${user.uid}/${file.name}`);
+      const task = uploadBytesResumable(storageRef, file);
+      const card = createProgressCard(file.name);
+      document.getElementById('file-list').prepend(card);
+
+      task.on('state_changed',
+        snap => {
+          const pct = Math.round(snap.bytesTransferred / snap.totalBytes * 100);
+          card.querySelector('.prog-bar').style.width = pct + '%';
+          card.querySelector('.prog-label').textContent = pct + '%';
+        },
+        err => { toast('Upload failed: ' + err.message, 'error'); card.remove(); },
+        async () => {
+          toast(`${file.name} uploaded!`, 'success');
+          card.remove();
+          loadFiles(user);
+          document.getElementById('file-input').value = '';
+        }
+      );
+    });
+  };
+
+  async function loadFiles(user) {
+    const list = document.getElementById('file-list');
+    const empty = document.getElementById('empty-state');
+    list.innerHTML = '<div class="loading-files">Loading files…</div>';
+    try {
+      const folderRef = ref(storage, `users/${user.uid}/`);
+      const res = await listAll(folderRef);
+      list.innerHTML = '';
+      if (res.items.length === 0) {
+        empty.style.display = 'flex';
+        return;
+      }
+      empty.style.display = 'none';
+      for (const item of res.items) {
+        const [url, meta] = await Promise.all([getDownloadURL(item), getMetadata(item)]);
+        list.appendChild(createFileCard(item, meta, url, user));
+      }
+    } catch (e) {
+      list.innerHTML = '';
+      toast('Could not load files: ' + e.message, 'error');
+    }
+  }
+
+  async function deleteFile(item, card, user) {
+    if (!confirm(`Delete "${item.name}"?`)) return;
+    try {
+      await deleteObject(item);
+      card.classList.add('fade-out');
+      setTimeout(() => { card.remove(); loadFiles(user); }, 300);
+      toast('File deleted', 'success');
+    } catch (e) {
+      toast('Delete failed: ' + e.message, 'error');
+    }
+  }
+
+  async function shareFile(url) {
+    try {
+      await navigator.clipboard.writeText(url);
+      toast('Link copied to clipboard!', 'success');
+    } catch {
+      prompt('Copy this link:', url);
+    }
+  }
+
+  function createFileCard(item, meta, url, user) {
+    const card = document.createElement('div');
+    card.className = 'file-card';
+    const date = new Date(meta.timeCreated).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    card.innerHTML = `
+      <div class="file-icon">${iconFor(item.name)}</div>
+      <div class="file-info">
+        <div class="file-name" title="${item.name}">${item.name}</div>
+        <div class="file-meta">${fmtSize(meta.size)} · ${date}</div>
+      </div>
+      <div class="file-actions">
+        <a class="btn-act btn-dl" href="${url}" target="_blank" download="${item.name}" title="Download">↓</a>
+        <button class="btn-act btn-share" title="Copy share link">⇗</button>
+        <button class="btn-act btn-del" title="Delete">✕</button>
+      </div>`;
+    card.querySelector('.btn-share').onclick = () => shareFile(url);
+    card.querySelector('.btn-del').onclick = () => deleteFile(item, card, user);
+    return card;
+  }
+
+  function createProgressCard(name) {
+    const card = document.createElement('div');
+    card.className = 'file-card uploading';
+    card.innerHTML = `
+      <div class="file-icon">⏫</div>
+      <div class="file-info">
+        <div class="file-name">${name}</div>
+        <div class="prog-track"><div class="prog-bar"></div></div>
+      </div>
+      <div class="prog-label">0%</div>`;
+    return card;
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    const zone = document.getElementById('drop-zone');
+    ['dragenter', 'dragover'].forEach(e => zone.addEventListener(e, ev => {
+      ev.preventDefault(); zone.classList.add('drag-over');
+    }));
+    ['dragleave', 'drop'].forEach(e => zone.addEventListener(e, ev => {
+      ev.preventDefault(); zone.classList.remove('drag-over');
+    }));
+    zone.addEventListener('drop', ev => {
+      document.getElementById('file-input').files = ev.dataTransfer.files;
+      handleUpload();
+    });
+  });
+
+  window.filterFiles = () => {
+    const q = document.getElementById('search').value.toLowerCase();
+    document.querySelectorAll('.file-card').forEach(c => {
+      const n = c.querySelector('.file-name')?.textContent.toLowerCase() || '';
+      c.style.display = n.includes(q) ? '' : 'none';
+    });
+  };
+</script>
+
+<style>
+  :root {
+    --bg:      #0c0c0f;
+    --surface: #141418;
+    --border:  #242430;
+    --accent:  #c8f05a;
+    --accent2: #5af0c8;
+    --text:    #f0ede8;
+    --muted:   #7a7880;
+    --danger:  #f05a5a;
+    --radius:  12px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 0;
+  }
+
+  #auth-screen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 24px;
+    position: relative; z-index: 1;
+  }
+
+  .auth-glow {
+    position: fixed;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(200,240,90,.12) 0%, transparent 70%);
+    top: -100px; right: -100px;
+    pointer-events: none;
+  }
+
+  .auth-glow2 {
+    position: fixed;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(90,240,200,.08) 0%, transparent 70%);
+    bottom: -80px; left: -80px;
+    pointer-events: none;
+  }
+
+  .auth-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 48px 40px;
+    width: 100%;
+    max-width: 420px;
+    position: relative;
+    animation: slideUp .5s cubic-bezier(.22,1,.36,1);
+  }
+
+  .auth-logo {
+    font-family: 'DM Serif Display', serif;
+    font-size: 2rem;
+    color: var(--accent);
+    letter-spacing: -1px;
+    margin-bottom: 4px;
+  }
+
+  .auth-tagline {
+    color: var(--muted);
+    font-size: .78rem;
+    margin-bottom: 36px;
+  }
+
+  label {
+    display: block;
+    font-size: .72rem;
+    color: var(--muted);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  input[type="email"], input[type="password"], input[type="text"] {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: .9rem;
+    padding: 12px 14px;
+    outline: none;
+    transition: border-color .2s;
+    margin-bottom: 16px;
+  }
+
+  input:focus { border-color: var(--accent); }
+
+  .btn-row { display: flex; gap: 10px; margin-top: 4px; }
+
+  .btn {
+    flex: 1;
+    padding: 12px;
+    border-radius: var(--radius);
+    font-family: 'DM Mono', monospace;
+    font-size: .82rem;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: transform .15s, opacity .15s;
+    letter-spacing: .03em;
+  }
+
+  .btn:hover { transform: translateY(-1px); opacity: .9; }
+  .btn:active { transform: translateY(0); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+  .btn-primary { background: var(--accent); color: #0c0c0f; }
+  .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+
+  .divider {
+    display: flex; align-items: center; gap: 12px;
+    color: var(--muted); font-size: .75rem;
+    margin: 20px 0;
+  }
+
+  .divider::before, .divider::after {
+    content: ''; flex: 1;
+    height: 1px; background: var(--border);
+  }
+
+  .btn-google {
+    width: 100%;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 12px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: .82rem;
+    cursor: pointer;
+    transition: border-color .2s, background .2s;
+  }
+
+  .btn-google:hover { border-color: var(--accent2); background: rgba(90,240,200,.05); }
+
+  #app-screen {
+    display: none;
+    flex-direction: column;
+    min-height: 100vh;
+    position: relative; z-index: 1;
+  }
+
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 32px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(20,20,24,.8);
+    backdrop-filter: blur(12px);
+    position: sticky; top: 0; z-index: 10;
+  }
+
+  .logo { font-family: 'DM Serif Display', serif; font-size: 1.4rem; color: var(--accent); }
+
+  .user-info { display: flex; align-items: center; gap: 16px; }
+
+  #user-email { font-size: .78rem; color: var(--muted); }
+
+  .btn-signout {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--muted); border-radius: 8px;
+    padding: 6px 14px; font-family: 'DM Mono', monospace;
+    font-size: .75rem; cursor: pointer;
+    transition: border-color .2s, color .2s;
+  }
+
+  .btn-signout:hover { border-color: var(--danger); color: var(--danger); }
+
+  main { padding: 40px 32px; max-width: 900px; margin: 0 auto; width: 100%; }
+
+  .section-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.5rem;
+    margin-bottom: 6px;
+  }
+
+  .section-sub { color: var(--muted); font-size: .78rem; margin-bottom: 20px; }
+
+  #drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: 16px;
+    padding: 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .2s, background .2s;
+    background: rgba(255,255,255,.01);
+    margin-bottom: 40px;
+  }
+
+  #drop-zone:hover, #drop-zone.drag-over {
+    border-color: var(--accent);
+    background: rgba(200,240,90,.04);
+  }
+
+  #drop-zone.drag-over { border-style: solid; }
+
+  .drop-icon { font-size: 2.4rem; margin-bottom: 10px; }
+  .drop-text { color: var(--muted); font-size: .82rem; margin-bottom: 16px; }
+  .drop-text span { color: var(--accent); }
+
+  #file-input { display: none; }
+
+  .btn-upload {
+    background: var(--accent);
+    color: #0c0c0f;
+    border: none;
+    border-radius: var(--radius);
+    padding: 10px 24px;
+    font-family: 'DM Mono', monospace;
+    font-size: .82rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: transform .15s, opacity .15s;
+  }
+
+  .btn-upload:hover { transform: translateY(-1px); opacity: .9; }
+
+  .files-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  #search {
+    width: 220px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: .8rem;
+    padding: 8px 12px;
+    outline: none;
+    transition: border-color .2s;
+  }
+
+  #search:focus { border-color: var(--accent); }
+
+  #file-list { display: flex; flex-direction: column; gap: 10px; min-height: 60px; }
+
+  .loading-files { color: var(--muted); font-size: .8rem; padding: 20px 0; }
+
+  #empty-state {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    padding: 60px 20px;
+    color: var(--muted);
+    gap: 8px;
+  }
+
+  .empty-icon { font-size: 2.5rem; }
+  .empty-text { font-size: .82rem; }
+
+  .file-card {
+    display: flex; align-items: center; gap: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    transition: border-color .2s, transform .2s;
+    animation: fadeIn .3s ease;
+  }
+
+  .file-card:hover { border-color: #3a3a48; transform: translateX(3px); }
+  .file-card.fade-out { opacity: 0; transform: scale(.95); transition: all .3s; }
+  .file-card.uploading { border-color: rgba(200,240,90,.3); }
+
+  .file-icon { font-size: 1.6rem; flex-shrink: 0; }
+  .file-info { flex: 1; min-width: 0; }
+
+  .file-name {
+    font-size: .85rem; font-weight: 500;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    color: var(--text); margin-bottom: 3px;
+  }
+
+  .file-meta { font-size: .72rem; color: var(--muted); }
+
+  .file-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+  .btn-act {
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 8px;
+    font-size: .85rem;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    text-decoration: none;
+    transition: background .15s, color .15s, border-color .15s;
+  }
+
+  .btn-dl:hover    { background: rgba(90,240,200,.12); color: var(--accent2); border-color: var(--accent2); }
+  .btn-share:hover { background: rgba(200,240,90,.12); color: var(--accent); border-color: var(--accent); }
+  .btn-del:hover   { background: rgba(240,90,90,.12); color: var(--danger); border-color: var(--danger); }
+
+  .prog-track {
+    height: 4px; background: var(--border);
+    border-radius: 2px; margin-top: 8px; overflow: hidden;
+  }
+
+  .prog-bar {
+    height: 100%; background: var(--accent);
+    border-radius: 2px; width: 0;
+    transition: width .2s;
+  }
+
+  .prog-label { font-size: .75rem; color: var(--accent); min-width: 36px; text-align: right; }
+
+  .toast {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text); border-radius: 10px;
+    padding: 10px 20px; font-size: .8rem;
+    opacity: 0; pointer-events: none;
+    transition: opacity .25s, transform .25s;
+    z-index: 1000; white-space: nowrap;
+  }
+
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.success { border-color: var(--accent); color: var(--accent); }
+  .toast.error   { border-color: var(--danger); color: var(--danger); }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateX(-8px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  @media (max-width: 600px) {
+    header { padding: 14px 16px; }
+    main { padding: 24px 16px; }
+    .auth-box { padding: 32px 24px; }
+    .files-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+    #search { width: 100%; }
+  }
+</style>
 </head>
 <body>
-    <h1>Hello, world!</h1>
-    <script src="scripts.js"></script>
+
+<div id="auth-screen">
+  <div class="auth-glow"></div>
+  <div class="auth-glow2"></div>
+  <div class="auth-box">
+    <div class="auth-logo">FileVault</div>
+    <div class="auth-tagline">Secure cloud file storage</div>
+
+    <label for="auth-email">Email</label>
+    <input type="email" id="auth-email" placeholder="you@example.com" autocomplete="email">
+
+    <label for="auth-pass">Password</label>
+    <input type="password" id="auth-pass" placeholder="••••••••" autocomplete="current-password"
+           onkeydown="if(event.key==='Enter') signIn()">
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btn-signin" onclick="signIn()">Sign In</button>
+      <button class="btn btn-outline" id="btn-signup" onclick="signUp()">Create Account</button>
+    </div>
+
+    <div class="divider">or</div>
+
+    <button class="btn-google" onclick="signInGoogle()">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Continue with Google
+    </button>
+  </div>
+</div>
+
+<div id="app-screen">
+  <header>
+    <div class="logo">FileVault</div>
+    <div class="user-info">
+      <span id="user-email"></span>
+      <button class="btn-signout" onclick="logOut()">Sign out</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="section-title">Upload Files</div>
+    <div class="section-sub">Drop files anywhere or click to browse</div>
+
+    <div id="drop-zone" onclick="document.getElementById('file-input').click()">
+      <div class="drop-icon">☁️</div>
+      <div class="drop-text">Drag & drop files here, or <span>browse</span></div>
+      <button class="btn-upload" onclick="event.stopPropagation(); document.getElementById('file-input').click()">
+        Choose Files
+      </button>
+      <input type="file" id="file-input" multiple onchange="handleUpload()">
+    </div>
+
+    <div class="files-header">
+      <div>
+        <div class="section-title">Your Files</div>
+      </div>
+      <input type="text" id="search" placeholder="Search files…" oninput="filterFiles()">
+    </div>
+
+    <div id="file-list"></div>
+    <div id="empty-state">
+      <div class="empty-icon">📭</div>
+      <div class="empty-text">No files yet — upload something!</div>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
 </body>
 </html>
